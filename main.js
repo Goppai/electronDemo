@@ -1,18 +1,20 @@
 // Modules to control application life and create native browser window
 const { app, BrowserWindow } = require("electron");
-
+const addon = require('@cc/findhasp');
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 var sudo = require("sudo-prompt");
 var options = {
   name: "Electron"
 };
+
+
 let mainWindow;
 let loading;
 let dialog;
-var root = true;
 
-function a() {
+
+async function  a(){
   // Create the browser window.
 
   mainWindow = new BrowserWindow({
@@ -48,9 +50,19 @@ function a() {
   loading.loadFile("loading.html");
   dialog.loadFile("indexDialog.html");
 
-  sudo.exec("echo hello", options, function(error, stdout, stderr) {
+  await sudo.exec("echo hello", options, function(error, stdout, stderr) {
     console.log("stdout: " + stdout + stderr);
-    if (error) app.quit();
+     if (error) app.quit();
+     if (stdout) {
+       console.log(addon.findHasp());
+      if (addon.findHasp() === false) {
+        dialog.show();
+      }
+      setInterval(function() {
+        if(addon.findHasp() === false)
+        dialog.show();
+        }, 2000);
+     }
   });
 
   // Open the DevTools.
@@ -64,23 +76,17 @@ function a() {
   });
 
   const ipc = require("electron").ipcMain;
-  if (root === false) {
-    dialog.show();
-  }
+  
   ipc.on("news", function() {
-    if (root === false) {
-      dialog.hide();
+    if (addon.findHasp() === false) {
+      app.quit();
     } else {
       dialog.hide();
       loading.show();
       mainWindow.close();
     }
   });
-  // setInterval
-  setTimeout(function() {
-    root = false;
-    dialog.show();
-  }, 5000);
+
 }
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
