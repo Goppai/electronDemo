@@ -1,20 +1,23 @@
 // Modules to control application life and create native browser window
 const { app, BrowserWindow } = require("electron");
-const addon = require('@cc/findhasp');
+const addon = require("@cc/findhasp");
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 var sudo = require("sudo-prompt");
 var options = {
   name: "Electron"
 };
+var Sudoer = require("electron-sudo").default;
 
+sudoer = new Sudoer(options);
+
+/* Spawn subprocess behavior */
 
 let mainWindow;
 let loading;
 let dialog;
 
-
-async function  a(){
+async function a() {
   // Create the browser window.
 
   mainWindow = new BrowserWindow({
@@ -50,20 +53,33 @@ async function  a(){
   loading.loadFile("loading.html");
   dialog.loadFile("indexDialog.html");
 
-  await sudo.exec("echo hello", options, function(error, stdout, stderr) {
-    console.log("stdout: " + stdout + stderr);
-     if (error) app.quit();
-     if (stdout) {
-       console.log(addon.findHasp());
-      if (addon.findHasp() === false) {
-        dialog.show();
-      }
-      setInterval(function() {
-        if(addon.findHasp() === false)
-        dialog.show();
-        }, 2000);
-     }
+  // await sudo.exec("echo hello", options, function(error, stdout, stderr) {
+  //   console.log("stdout: " + stdout + stderr);
+  //    if (error) app.quit();
+  //    if (stdout) {
+  //      console.log(addon.findHasp());
+  //     if (addon.findHasp() === false) {
+  //       dialog.show();
+  //     }
+  //     setInterval(function() {
+  //       if(addon.findHasp() === false)
+  //       dialog.show();
+  //       }, 2000);
+  //    }
+  // });
+  let cp = await sudoer.spawn("echo", ["$PARAM"], { env: { PARAM: "VALUE" } });
+  cp.on("close", () => {
+    app.quit();
   });
+  if (cp) {
+    console.log(addon.findHasp());
+    if (addon.findHasp() === false) {
+      dialog.show();
+    }
+    setInterval(function() {
+      if (addon.findHasp() === false) dialog.show();
+    }, 2000);
+  }
 
   // Open the DevTools.
   // mainWindow.webContents.openDevTools()
@@ -76,7 +92,7 @@ async function  a(){
   });
 
   const ipc = require("electron").ipcMain;
-  
+
   ipc.on("news", function() {
     if (addon.findHasp() === false) {
       app.quit();
@@ -86,7 +102,6 @@ async function  a(){
       mainWindow.close();
     }
   });
-
 }
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
